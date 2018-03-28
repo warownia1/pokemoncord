@@ -29,8 +29,8 @@ long_line_column=72
 
 [files]
 current_page=0
-FILE_NAME_0=3452;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cdiscordbot%5CBasicBot.py;0;4
-FILE_NAME_1=416;None;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cdiscordbot%5Cpkmn-list.txt;0;4
+FILE_NAME_0=4500;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cdiscordbot%5CBasicBot.py;0;4
+FILE_NAME_1=426;None;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cdiscordbot%5Cpkmn-list.txt;0;4
 
 [build-menu]
 EX_00_LB=_Execute
