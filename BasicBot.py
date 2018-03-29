@@ -25,7 +25,7 @@ PkmnEntry = namedtuple('PkmnEntry', 'no, name')
 client = discord.Client()
 
 pkmn_list = []
-pkmn_storage = []
+pkmn_box = []
 pkmn_team = []
 spawner_loop_task = None
 
@@ -39,14 +39,14 @@ def init():
             pkmn_list.append(pkmn)
 
     # load previously saved owned pokemons
-    global pkmn_storage, pkmn_team
+    global pkmn_box, pkmn_team
     try:
         with open('pkmn-storage.dat', 'rb') as storage_file, \
                 open('pkmn-team.dat', 'rb') as team_file:
-            pkmn_storage = pickle.load(storage_file)
+            pkmn_box = pickle.load(storage_file)
             pkmn_team = pickle.load(team_file)
     except FileNotFoundError:
-        pkmn_storage = defaultdict(list)
+        pkmn_box = defaultdict(list)
         pkmn_team = defaultdict(list)
 
 
@@ -101,8 +101,7 @@ def withdraw_pkmn_handler(message):
     else:
         tokens = message.content.split()
         pkmn_name = ' '.join(tokens[2:])
-        print(pkmn_storage[message.author.id])
-        pkmn_storage[message.author.id].remove(pkmn_name)
+        pkmn_box[message.author.id].remove(pkmn_name)
         pkmn_team[message.author.id].append(pkmn_name)
         text = '{} withdrawn.'.format(pkmn_name)
     yield from client.send_message(message.channel, text)
@@ -112,9 +111,8 @@ def withdraw_pkmn_handler(message):
 def deposit_pkmn_handler(message):
     tokens = message.content.split()
     pkmn_name = ' '.join(tokens[2:])
-    print(pkmn_team[message.author.id])
     pkmn_team[message.author.id].remove(pkmn_name)
-    pkmn_storage[message.author.id].append(pkmn_name)
+    pkmn_box[message.author.id].append(pkmn_name)
     yield from client.send_message(
         message.channel, '{} sent to box'.format(pkmn_name)
     )
@@ -157,7 +155,7 @@ def add_caught_pokemon(user, pkmn, channel):
     if len(pkmn_team[user.id]) < 6:
         pkmn_team[user.id].append(pkmn.name)
     else:
-        pkmn_storage[user.id].append(pkmn.name)
+        pkmn_box[user.id].append(pkmn.name)
         text += '\nPokemon was added to your storage'
     asyncio.ensure_future(client.send_message(channel, text))
 
@@ -173,7 +171,7 @@ def start_spawner_loop(channel):
 @asyncio.coroutine
 def list_pokemon_storage(user, channel):
     text = 'Your pokémons:\n' + '\n'.join(
-        " - **%s**" % name for name in pkmn_storage[user.id]
+        " - **%s**" % name for name in pkmn_box[user.id]
     )
     yield from client.send_message(channel, text)
 
@@ -230,16 +228,16 @@ def start_trade(message):
 
 def trade_pkmns(seller, soffer, buyer, boffer):
     log.info('exchange %s for %s', soffer, boffer)
-    sarg = pkmn_storage[seller.id].index(soffer)
-    barg = pkmn_storage[buyer.id].index(boffer)
-    pkmn_storage[buyer.id].append(pkmn_storage[seller.id].pop(sarg))
-    pkmn_storage[seller.id].append(pkmn_storage[buyer.id].pop(barg))
+    sarg = pkmn_box[seller.id].index(soffer)
+    barg = pkmn_box[buyer.id].index(boffer)
+    pkmn_box[buyer.id].append(pkmn_box[seller.id].pop(sarg))
+    pkmn_box[seller.id].append(pkmn_box[buyer.id].pop(barg))
 
 
 def save_pkmn_to_file():
     with open('pkmn-storage.dat', 'wb') as storage_file, \
             open('pkmn-team.dat', 'wb') as team_file:
-        pickle.dump(pkmn_storage, storage_file)
+        pickle.dump(pkmn_box, storage_file)
         pickle.dump(pkmn_team, team_file)
 
 
