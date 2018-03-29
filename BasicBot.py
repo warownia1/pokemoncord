@@ -67,15 +67,12 @@ def on_message(message):
     elif message.content == 'pkmn team':
         yield from list_pokemon_team(message.author, message.channel)
     elif message.channel.is_private:
-        if message.content == 'pkmn help':
+        if message.content.startswith('pkmn deposit'):
+            yield from deposit_pkmn_handler(message)
+        elif message.content.startswith('pkmn withdraw'):
+            yield from withdraw_pkmn_handler(message)
+        elif message.content == 'pkmn help':
             yield from print_help(message.channel)
-        elif message.content == 'start spawner':
-            global spawner_loop_task
-            spawner_loop_task = client.loop.create_task(
-                start_spawner_loop(None)
-            )
-        elif message.content == 'cancel spawner':
-            spawner_loop_task.cancel()
         elif message.content == 'pkmn shutdown':
             yield from client.close()
             for task in asyncio.Task.all_tasks():
@@ -83,14 +80,47 @@ def on_message(message):
     else:
         if message.content.startswith('pkmn trade'):
             yield from start_trade(message)
+        elif message.content == 'start spawner':
+            global spawner_loop_task
+            spawner_loop_task = client.loop.create_task(
+                start_spawner_loop(message.channel)
+            )
+        elif message.content == 'cancel spawner':
+            spawner_loop_task.cancel()
 
 
-@client.async_event
+@asyncio.coroutine
 def print_help(channel):
     pass
+    
+
+@asyncio.coroutine
+def withdraw_pkmn_handler(message):
+    if len(pkmn_team[message.author.id]) >= 6:
+        text = 'Your team is full.'
+    else:
+        tokens = message.content.split()
+        pkmn_name = ' '.join(tokens[2:])
+        print(pkmn_storage[message.author.id])
+        pkmn_storage[message.author.id].remove(pkmn_name)
+        pkmn_team[message.author.id].append(pkmn_name)
+        text = '{} withdrawn.'.format(pkmn_name)
+    yield from client.send_message(message.channel, text)
 
 
-@client.async_event
+@asyncio.coroutine
+def deposit_pkmn_handler(message):
+    tokens = message.content.split()
+    pkmn_name = ' '.join(tokens[2:])
+    print(pkmn_team[message.author.id])
+    pkmn_team[message.author.id].remove(pkmn_name)
+    pkmn_storage[message.author.id].append(pkmn_name)
+    yield from client.send_message(
+        message.channel, '{} sent to box'.format(pkmn_name)
+    )
+
+
+@asyncio.coroutine
 def spawn_pkmn(channel, name=None):
     if name:
         pkmn = next(p for p in pkmn_list if p.name == name)
@@ -129,7 +159,7 @@ def add_caught_pokemon(user, pkmn, channel):
     else:
         pkmn_storage[user.id].append(pkmn.name)
         text += '\nPokemon was added to your storage'
-    asyncio.ensure_future(client.send_message(channel,text))
+    asyncio.ensure_future(client.send_message(channel, text))
 
 
 @asyncio.coroutine
