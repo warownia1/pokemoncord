@@ -1,0 +1,4 @@
+env/**
+**.dat
+__pycache__/**
+

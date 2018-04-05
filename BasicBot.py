@@ -25,13 +25,13 @@ console_handler.setFormatter(formatter)
 log.addHandler(console_handler)
 del console_handler, formatter
 
-PkmnEntry = namedtuple('PkmnEntry', 'no, name')
-client = discord.Client()
+logging.basicConfig(level=logging.INFO)
 
 TEAM_SIZE = 6
 pkmn_box = []
 pkmn_team = []
-spawner_loop_task = None
+spawner_loop_tasks = {}
+training_events = {}
 
 
 class Pokemon:
@@ -43,7 +43,7 @@ class Pokemon:
     def __init__(self, number):
         self.number = number
         self.name = self.all_pokemon[number]
-        self.exp = 0
+        self.exp = 1
         self.level = 1
 
     @classmethod
@@ -89,17 +89,38 @@ class Pokemon:
     del line, f, m
 
 
-def init():
-    # load previously saved owned pokemons
-    global pkmn_box, pkmn_team
-    try:
-        with open('pkmn-box.dat', 'rb') as box_file, \
-                open('pkmn-team.dat', 'rb') as team_file:
-            pkmn_box = pickle.load(box_file)
-            pkmn_team = pickle.load(team_file)
-    except FileNotFoundError:
-        pkmn_box = defaultdict(list)
-        pkmn_team = defaultdict(list)
+class CommandDispatcher:
+
+    PREFIX = 'pkmn '
+
+    def __init__(self, client):
+        self._registered_commands = []
+        self._client = client
+        client.event(self.on_message)
+
+    def async_register(self, command):
+        if not command.startswith(self.PREFIX):
+            command = self.PREFIX + command
+        def add(func):
+            if not asyncio.iscoroutinefunction(func):
+                func = asyncio.coroutine(func)
+            self._registered_commands.append((command, func))
+            return func
+        return add
+
+    @asyncio.coroutine
+    def on_message(self, message):
+        if message.author == self._client.user:
+            return
+        if message.content.startswith(self.PREFIX):
+            for command, func in self._registered_commands:
+                if message.content.startswith(command):
+                    return ensure_future(func(message))
+            raise ValueError('Invalid command')
+
+
+client = discord.Client()
+command = CommandDispatcher(client)
 
 
 @client.async_event
@@ -107,51 +128,28 @@ def on_ready():
     print('Logged on as {0}'.format(client.user))
 
 
-@client.async_event
-def on_message(message):
-    if message.author == client.user:
-        return
-    log.info('Message from {0.author}: {0.content}'.format(message))
-    if message.content.startswith('pkmn spawn'):
-        ensure_future(spawn_pkmn(message.channel, message.content[11:]))
-    elif message.content == 'pkmn box':
-        ensure_future(list_pokemon_storage(message.author, message.channel))
-    elif message.content == 'pkmn team':
-        ensure_future(list_pokemon_team(message.author, message.channel))
-    elif message.content.startswith('pkmn show'):
-        ensure_future(show_pokemon_handler(message))
-    elif message.content == 'pkmn start training':
-        ensure_future(start_training(message.channel, message.author))
-    elif message.channel.is_private:
-        if message.content.startswith('pkmn deposit'):
-            ensure_future(deposit_pkmn_handler(message))
-        elif message.content.startswith('pkmn withdraw'):
-            ensure_future(withdraw_pkmn_handler(message))
-        elif message.content == 'pkmn help':
-            ensure_future(print_help(message.channel))
-        elif message.content == 'pkmn shutdown':
-            yield from client.close()
-            for task in asyncio.Task.all_tasks():
-                task.cancel()
-    else:
-        if message.content.startswith('pkmn trade'):
-            ensure_future(start_trade(message))
-        elif message.content == 'start spawner':
-            global spawner_loop_task
-            spawner_loop_task = client.loop.create_task(
-                start_spawner_loop(message.channel)
-            )
-        elif message.content == 'cancel spawner':
-            spawner_loop_task.cancel()
+@command.async_register('help')
+def print_help(message):
+    yield from client.send_message(
+        message.channel,
+        'Help text'
+    )
+
+
+@command.async_register('spawn')
+def spawn_request(message):
+    """Command: spawn [name] - spawn a pokemon with given name or random."""
+    yield from spawn_pokemon(message.channel, message.content[11:])
 
 
 @asyncio.coroutine
-def print_help(channel):
-    pass
+def spawn_pokemon(channel, name=None):
+    """Spawn the pokemon with given name in the channel.
 
-
-@asyncio.coroutine
-def spawn_pkmn(channel, name=None):
+    Creates a new Pokemon instance following the name or random if None given.
+    The notification of pokemon appearance is then send to a specified
+    channel and users can catch the pokemon.
+    """
     if name:
         pkmn = Pokemon.spawn_from_name(name)
     else:
@@ -180,6 +178,11 @@ def spawn_pkmn(channel, name=None):
 
 
 def add_caught_pokemon(user, pkmn, channel):
+    """Add caught pokemon to the user's storage.
+
+    Adds the pokemon to the storage and sends a notification about caught
+    pokemon to the channel.
+    """
     text = 'Congratulations! {} caught {}.'.format(
         user.mention, pkmn.name
     )
@@ -191,26 +194,34 @@ def add_caught_pokemon(user, pkmn, channel):
     ensure_future(client.send_message(channel, text))
 
 
-@asyncio.coroutine
-def list_pokemon_storage(user, channel):
+@command.async_register('box')
+def list_pokemon_storage(message):
+    """Command: box - list the pokemons in the user's box."""
     text = 'Your pokémons:\n' + '\n'.join(
         " - **{0.name}** lv. {0.level}".format(pkmn)
-        for pkmn in pkmn_box[user.id]
+        for pkmn in pkmn_box[message.author.id]
     )
-    yield from client.send_message(channel, text)
+    yield from client.send_message(message.channel, text)
 
 
-@asyncio.coroutine
-def list_pokemon_team(user, channel):
+@command.async_register('team')
+def list_pokemon_team(message):
+    """Command: team - list the pokemons in user's team."""
     text = 'Your team:\n' + '\n'.join(
         " - **{0.name}** lv. {0.level}".format(pkmn)
-        for pkmn in pkmn_team[user.id]
+        for pkmn in pkmn_team[message.author.id]
     )
-    yield from client.send_message(channel, text)
+    yield from client.send_message(message.channel, text)
 
 
-@asyncio.coroutine
-def show_pokemon_handler(message):
+@command.async_register('show')
+def show_pokemon(message):
+    """Command: show [index] - show the pokemon from your team.
+
+    Displays information about the pokemon in the current channel.
+    The pokemon is selected fron your team at the specified index,
+    if index is not given, show the first pokemon.
+    """
     num = int(message.content[10:] or 1)
     pkmn = pkmn_team[message.author.id][num - 1]
     em = discord.Embed(
@@ -221,23 +232,38 @@ def show_pokemon_handler(message):
     yield from client.send_message(message.channel, embed=em)
 
 
-@asyncio.coroutine
-def start_training(channel, user):
-    client.loop.call_later(3600, complete_training, time.time(), user)
-    yield from client.send_message(channel, "Training started.")
-
-
-def complete_training(start_time, user):
-    delta_time = time.time() - start_time
-    for pkmn in pkmn_team[user.id]:
-        pkmn.add_exp(round(delta_time / 60))
+@command.async_register('start training')
+def start_training(message):
+    """Command: start training - starts a one hour training."""
+    if training_events.get(message.author.id) is not None:
+        yield from client.send_message(
+            message.channel, "You are already training."
+        )
+        return
+    stop_event = asyncio.Event()
+    training_events[message.author.id] = stop_event
+    start_time = client.loop.time()
+    handler = client.loop.call_later(3600, stop_event.set)
+    yield from client.send_message(message.channel, "Training started.")
+    yield from stop_event.wait()
+    handler.cancel()
+    training_events[message.author.id] = None
+    delta_time = (client.loop.time() - start_time)
+    for pkmn in pkmn_team[message.author.id]:
+        pkmn.add_exp(delta_time)
     ensure_future(client.send_message(
-        user, "Training finished. You trained for %d seconds." % delta_time
+        message.author,
+        "Training finished. You trained for %f seconds." % delta_time
     ))
 
 
-@asyncio.coroutine
-def withdraw_pkmn_handler(message):
+@command.async_register('stop training')
+def stop_training(message):
+    training_events[message.author.id].set()
+
+
+@command.async_register('withdraw')
+def withdraw_pokemon(message):
     if len(pkmn_team[message.author.id]) >= TEAM_SIZE:
         text = 'Your team is full.'
     else:
@@ -252,7 +278,7 @@ def withdraw_pkmn_handler(message):
     yield from client.send_message(message.channel, text)
 
 
-@asyncio.coroutine
+@command.async_register('deposit')
 def deposit_pkmn_handler(message):
     tokens = message.content.split()
     pkmn_name = ' '.join(tokens[2:])
@@ -266,15 +292,7 @@ def deposit_pkmn_handler(message):
     )
 
 
-@asyncio.coroutine
-def start_spawner_loop(channel):
-    channel = client.get_channel('424271560967323669')
-    while True:
-        yield from spawn_pkmn(channel)
-        yield from asyncio.sleep(random.randint(30, 90))
-
-
-@asyncio.coroutine
+@command.async_register('trade')
 def start_trade(message):
     seller = message.author
     buyer = message.mentions[0]
@@ -308,16 +326,12 @@ def start_trade(message):
     if not Pokemon.name_exists(pkmn2_name):
         return
 
-    log.debug('%s sells %s', seller.name, pkmn_name)
-    log.debug('%s sells %s', buyer.name, pkmn2_name)
-
     # trade was accepted by both sides, complete the trade
     trade_pkmns(seller, pkmn_name, buyer, pkmn2_name)
     yield from client.send_message(channel, 'Trade completed.')
 
 
 def trade_pkmns(seller, sname, buyer, bname):
-    log.info('exchange %s for %s', sname, bname)
     sindex, spkmn = next((i, p) for (i, p) in enumerate(pkmn_box[seller.id])
                          if p.name == sname)
     bindex, bpkmn = next((i, p) for (i, p) in enumerate(pkmn_box[buyer.id])
@@ -326,7 +340,57 @@ def trade_pkmns(seller, sname, buyer, bname):
     pkmn_box[seller.id].append(pkmn_box[buyer.id].pop(bindex))
 
 
+@command.async_register('start spawner')
+def start_spawner(message):
+    global spawner_loop_tasks
+    channel = message.channel
+    if channel.id not in spawner_loop_tasks:
+        # channel = client.get_channel('424271560967323669')
+        spawner_loop_tasks[channel.id] = ensure_future(spawner_loop(channel))
+        yield from client.send_message(channel, 'Spawner started')
+
+
+@asyncio.coroutine
+def spawner_loop(channel):
+    while True:
+        yield from spawn_pokemon(channel)
+        yield from asyncio.sleep(random.randint(10, 20))
+
+
+@command.async_register('stop spawner')
+def stop_spawner_loop(message):
+    global spawner_loop_tasks
+    channel = message.channel
+    try:
+        spawner_loop_tasks[channel.id].cancel()
+        del spawner_loop_tasks[channel.id]
+        yield from client.send_message(channel, 'Spawner stopped')
+    except KeyError:
+        pass
+
+
+@command.async_register('shutdown')
+def shutdown(message):
+    yield from client.close()
+    for task in asyncio.Task.all_tasks():
+        task.cancel()
+
+
+def init():
+    """Load previously saved pokemons."""
+    global pkmn_box, pkmn_team
+    try:
+        with open('pkmn-box.dat', 'rb') as box_file, \
+                open('pkmn-team.dat', 'rb') as team_file:
+            pkmn_box = pickle.load(box_file)
+            pkmn_team = pickle.load(team_file)
+    except FileNotFoundError:
+        pkmn_box = defaultdict(list)
+        pkmn_team = defaultdict(list)
+
+
 def save_pkmn_to_file():
+    """Save current team and storage states to files."""
     with open('pkmn-box.dat', 'wb') as storage_file, \
             open('pkmn-team.dat', 'wb') as team_file:
         pickle.dump(pkmn_box, storage_file)
