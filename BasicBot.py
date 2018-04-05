@@ -31,7 +31,7 @@ TEAM_SIZE = 6
 pkmn_box = []
 pkmn_team = []
 spawner_loop_tasks = {}
-training_events = {}
+stop_training_events = {}
 
 
 class Pokemon:
@@ -235,19 +235,19 @@ def show_pokemon(message):
 @command.async_register('start training')
 def start_training(message):
     """Command: start training - starts a one hour training."""
-    if training_events.get(message.author.id) is not None:
+    if message.author.id in stop_training_events:
         yield from client.send_message(
             message.channel, "You are already training."
         )
         return
     stop_event = asyncio.Event()
-    training_events[message.author.id] = stop_event
+    stop_training_events[message.author.id] = stop_event
     start_time = client.loop.time()
     handler = client.loop.call_later(3600, stop_event.set)
     yield from client.send_message(message.channel, "Training started.")
     yield from stop_event.wait()
     handler.cancel()
-    training_events[message.author.id] = None
+    del stop_training_events[message.author.id]
     delta_time = (client.loop.time() - start_time)
     for pkmn in pkmn_team[message.author.id]:
         pkmn.add_exp(delta_time)
@@ -259,7 +259,10 @@ def start_training(message):
 
 @command.async_register('stop training')
 def stop_training(message):
-    training_events[message.author.id].set()
+    try:
+        stop_training_events[message.author.id].set()
+    except KeyError:
+        pass
 
 
 @command.async_register('withdraw')
