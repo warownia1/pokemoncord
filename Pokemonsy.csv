@@ -1,0 +1,251 @@
+1,Bulbasaur,grass poison,16,2
+2,Ivysaur,grass poison,32,3
+3,Venusaur,grass poison,,
+4,Charmander,fire,16,5
+5,Charmeleon,fire,36,6
+6,Charizard,fire flying,,
+7,Squirtle,water,16,8
+8,Wartortle,water,36,9
+9,Blastoise,water,,
+10,Caterpie,bug,7,11
+11,Metapod,bug,10,12
+12,Butterfree,bug flying,,
+13,Weedle,bug poison,7,14
+14,Kakuna,bug poison,10,15
+15,Beedrill,bug poison,,
+16,Pidgey,normal flying,18,17
+17,Pidgeotto,normal flying,36,18
+18,Pidgeot,normal flying,,
+19,Rattata,normal,20,20
+20,Raticate,normal,,
+21,Spearow,normal flying,20,22
+22,Fearow,normal flying,,
+23,Ekans,poison,22,24
+24,Arbok,poison,,
+25,Pikachu,electric,25,26
+26,Raichu,electric,,
+27,Sandshrew,earth,22,28
+28,Sandslash,earth,,
+29,Nidoran♀,poison,16,30
+30,Nidorina,poison,32,31
+31,Nidoqueen,poison earth,,
+32,Nidoran♂,poison,16,33
+33,Nidorino,poison,32,34
+34,Nidoking,poison earth,,
+35,Clefairy,fairy,25,36
+36,Clefable,fairy,,
+37,Vulpix,fire,16,28
+38,Ninetales,fire,,
+39,Jigglypuff,normal fairy,25,40
+40,Wigglytuff,normal fairy,,
+41,Zubat,poison flying,22,42
+42,Golbat,poison flying,36,169
+43,Oddish,grass poison,21,44
+44,Gloom,grass poison,40,45/182
+45,Vileplume,grass poison,,
+46,Paras,bug grass,24,47
+47,Parasect,bug grass,,
+48,Venonat,bug poison,31,49
+49,Venomoth,bug poison,,
+50,Diglett,earth,26,51
+51,Dugtrio,earth,,
+52,Meowth,normal,28,53
+53,Persian,normal,,
+54,Psyduck,water,33,55
+55,Golduck,water,,
+56,Mankey,fighting,28,57
+57,Primeape,fighting,,
+58,Growlithe,fire,25,59
+59,Arcanine,fire,,
+60,Poliwag,water,25,61
+61,Poliwhirl,water,40,62/186
+62,Poliwrath,water fighting,,
+63,Abra,psyhic,16,64
+64,Kadabra,psyhic,45,65
+65,Alakazam,psyhic,,
+66,Machop,fighting,28,67
+67,Machoke,fighting,40,68
+68,Machamp,fighting,,
+69,Bellsprout,grass poison,21,70
+70,Weepinbell,grass poison,40,71
+71,Victreebel,grass poison,,
+72,Tentacool,water poison,30,73
+73,Tentacruel,water poison,,
+74,Geodude,stone earth,25,75
+75,Graveler,stone earth,40,76
+76,Golem,stone earth,,
+77,Ponyta,fire,40,78
+78,Rapidash,fire,,
+79,Slowpoke,water psyhic,37,80/199
+80,Slowbro,water psyhic,,
+81,Magnemite,electric steel,30,
+82,Magneton,electric steel,45,
+83,Farfetch'd,normal flying,,
+84,Doduo,normal flying,31,85
+85,Dodrio,normal flying,,
+86,Seel,water,34,87
+87,Dewgong,water ice,,
+88,Grimer,poison,38,89
+89,Muk,poison,,
+90,Shellder,water,16,91
+91,Cloyster,water ice,,
+92,Gastly,ghost poison,25,93
+93,Haunter,ghost poison,45,94
+94,Gengar,ghost poison,,
+95,Onix,stone earth,40,208
+96,Drowzee,psyhic,26,97
+97,Hypno,psyhic,,
+98,Krabby,water,28,99
+99,Kingler,water,,
+100,Voltorb,electric,30,101
+101,Electrode,electric,,
+102,Exeggcute,grass psyhic,16,103
+103,Exeggutor,grass psyhic,,
+104,Cubone,earth,28,105
+105,Marowak,earth,,
+106,Hitmonlee,fighting,,
+107,Hitmonchan,fighting,,
+108,Lickitung,normal,33,
+109,Koffing,poison,35,110
+110,Weezing,poison,,
+111,Rhyhorn,earth stone,42,112
+112,Rhydon,earth stone,55,
+113,Chansey,normal,40,242
+114,Tangela,grass,40,
+115,Kangaskhan,normal,,
+116,Horsea,water,32,117
+117,Seadra,water,50,230
+118,Goldeen,water,33,119
+119,Seaking,water,,
+120,Staryu,water,25,121
+121,Starmie,water psyhic,,
+122,Mr. Mime,psyhic fairy,,
+123,Scyther,bug flying,40,212
+124,Jynx,ice psyhic,,
+125,Electabuzz,electric,45,
+126,Magmar,fire,45,
+127,Pinsir,bug,,
+128,Tauros,normal,,
+129,Magikarp,water,20,130
+130,Gyarados,water flying,,
+131,Lapras,water ice,,
+132,Ditto,normal,,
+133,Eevee,normal,12,134/135/136/196/197
+134,Vaporeon,water,,
+135,Jolteon,electric,,
+136,Flareon,fire,,
+137,Porygon,normal,25,233
+138,Omanyte,stone water,40,139
+139,Omastar,stone water,,
+140,Kabuto,stone water,40,142
+141,Kabutops,stone water,,
+142,Aerodactyl,stone flying,,
+143,Snorlax,normal,,
+144,Articuno,ice flying,,
+145,Zapdos,electric flying,,
+146,Moltres,fire flying,,
+147,Dratini,Smoczy,30,148
+148,Dragonair,Smoczy,55,149
+149,Dragonite,Smoczy flying,,
+150,Mewtwo,psyhic,,
+151,Mew,psyhic,,
+152,Chikorita,grass,16,153
+153,Bayleef,grass,32,154
+154,Meganium,grass,,
+155,Cyndaquil,fire,14,156
+156,Quilava,fire,36,157
+157,Typhlosion,fire,,
+158,Totodile,water,18,159
+159,Croconaw,water,30,160
+160,Feraligatr,water,,
+161,Sentret,normal,15,162
+162,Furret,normal,,
+163,Hoothoot,normal flying,20,164
+164,Noctowl,normal flying,,
+165,Ledyba,bug flying,18,166
+166,Ledian,bug flying,,
+167,Spinarak,bug poison,22,168
+168,Ariados,bug poison,,
+169,Crobat,poison flying,,
+170,Chinchou,water electric,27,171
+171,Lanturn,water electric,,
+172,Pichu,electric,12,16
+173,Cleffa,fairy,12,35
+174,Igglybuff,normal fairy,12,39
+175,Togepi,fairy,12,176
+176,Togetic,fairy flying,34,
+177,Natu,psyhic flying,25,178
+178,Xatu,psyhic flying,,
+179,Mareep,electric,15,180
+180,Flaaffy,electric,30,181
+181,Ampharos,electric,,
+182,Bellossom,grass,,
+183,Marill,water fairy,18,184
+184,Azumarill,water fairy,,
+185,Sudowoodo,stone,,
+186,Politoed,water,,
+187,Hoppip,grass flying,18,188
+188,Skiploom,grass flying,27,189
+189,Jumpluff,grass flying,,
+190,Aipom,normal,32,
+191,Sunkern,grass,16,792
+192,Sunflora,grass,,
+193,Yanma,bug flying,33,
+194,Wooper,water earth,20,195
+195,Quagsire,water earth,,
+196,Espeon,psyhic,,
+197,Umbreon,dark,,
+198,Murkrow,dark flying,25,
+199,Slowking,water psyhic,,
+200,Misdreavus,ghost,25,
+201,Unown,psyhic,,
+202,Wobbuffet,psyhic,,
+203,Girafarig,normal psyhic,,
+204,Pineco,bug,31,205
+205,Forretress,bug steel,,
+206,Dunsparce,normal,,
+207,Gligar,earth flying,40,
+208,Steelix,steel earth,,
+209,Snubbull,fairy,23,210
+210,Granbull,fairy,,
+211,Qwilfish,water poison,,
+212,Scizor,bug steel,,
+213,Shuckle,bug stone,,
+214,Heracross,bug fighting,,
+215,Sneasel,dark ice,35,
+216,Teddiursa,normal,30,217
+217,Ursaring,normal,,
+218,Slugma,fire,38,219
+219,Magcargo,fire stone,,
+220,Swinub,ice earth,33,221
+221,Piloswine,ice earth,43,
+222,Corsola,water stone,,224
+223,Remoraid,water,25,
+224,Octillery,water,,
+225,Delibird,ice flying,,
+226,Mantine,water flying,,
+227,Skarmory,steel flying,,
+228,Houndour,dark fire,24,229
+229,Houndoom,dark fire,,
+230,Kingdra,water Smok,,
+231,Phanpy,earth,25,232
+232,Donphan,earth,,
+233,Porygon2,normal,45,
+234,Stantler,normal,,
+235,Smeargle,normal,,
+236,Tyrogue,fighting,20,106/107/237
+237,Hitmontop,fighting,,
+238,Smoochum,ice psyhic,30,124
+239,Elekid,electric,30,125
+240,Magby,fire,30,126
+241,Miltank,normal,,
+242,Blissey,normal,,
+243,Raikou,electric,,
+244,Entei,fire,,
+245,Suicune,water,,
+246,Larvitar,stone earth,30,247
+247,Pupitar,stone earth,55,248
+248,Tyranitar,stone dark,,
+249,Lugia,psyhic flying,,
+250,Ho-oh,fire flying,,
+251,Celebi,psyhic grass,,

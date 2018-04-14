@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import logging
 import pickle
 import random
@@ -34,6 +35,10 @@ spawner_loop_tasks = {}
 stop_training_events = {}
 
 
+PokemonRawData = namedtuple('PokemonData',
+                            'name, types, evo_level, evo_targets')
+
+
 class Pokemon:
 
     __slots__ = ['number', 'name', 'exp', 'level']
@@ -42,7 +47,7 @@ class Pokemon:
 
     def __init__(self, number):
         self.number = number
-        self.name = self.all_pokemon[number]
+        self.name = self.all_pokemon[self.number].name
         self.exp = 1
         self.level = 1
 
@@ -52,8 +57,8 @@ class Pokemon:
 
     @classmethod
     def spawn_from_name(cls, name):
-        for number, pkmn_name in cls.all_pokemon.items():
-            if name == pkmn_name:
+        for number, pkmn in cls.all_pokemon.items():
+            if name == pkmn[0]:
                 return cls(number)
         raise ValueError('No pokemon %s' % name)
 
@@ -70,23 +75,31 @@ class Pokemon:
         target_level = self.level_from_exp(self.exp)
         if target_level > self.level:
             self.level = target_level
-            return True
-        return False
+            if target_level >= self.evolution_level:
+                self.number = self.evolution_targets[0]
 
     @staticmethod
     def level_from_exp(exp):
         return int((5 / 4 * exp) ** (1/3))
 
     @property
-    def no(self):
-        warnings.warn("Use Pokemon.number instead.", DeprecationWarning)
-        return self.number
+    def evolution_level(self):
+        return self.all_pokemon[self.number].evo_level
 
-    with open('pkmn-list.txt', 'r', encoding='utf8') as f:
-        for line in f:
-            m = re.match(r'#(\d{3}) (.+)\n', line)
-            all_pokemon[int(m.group(1))] = m.group(2)
-    del line, f, m
+    @property
+    def evolution_targets(self):
+        return self.all_pokemon[self.number].evo_targets
+
+    with open('Pokemonsy.csv', newline='', encoding='utf8') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            all_pokemon[int(row[0])] = PokemonRawData(
+                row[1],
+                row[2].split(),
+                int(row[3] or 99999),
+                [int(n or -1) for n in row[4].split('/')]
+            )
+    del f, reader
 
 
 class CommandDispatcher:
@@ -248,12 +261,12 @@ def start_training(message):
     yield from stop_event.wait()
     handler.cancel()
     del stop_training_events[message.author.id]
-    delta_time = (client.loop.time() - start_time)
+    delta_time = (client.loop.time() - start_time) // 60
     for pkmn in pkmn_team[message.author.id]:
         pkmn.add_exp(delta_time)
     ensure_future(client.send_message(
         message.author,
-        "Training finished. You trained for %f seconds." % delta_time
+        "Training finished. You trained for %u minutes." % delta_time
     ))
 
 
