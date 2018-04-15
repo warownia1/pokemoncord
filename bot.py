@@ -1,6 +1,7 @@
 import asyncio
 import csv
 import logging
+import os
 import pickle
 import random
 import re
@@ -14,7 +15,7 @@ from collections import defaultdict, namedtuple
 import discord
 
 
-ACCESS_TOKEN = 'NDI0NjQ1MTUzNzMxNTEwMjky.DY8JIA.MPw2ScY0FqaOfVI5RsFUYIWGWEk'
+ACCESS_TOKEN = os.environ['DISCORD_TOKEN']
 
 # logging configuration
 log = logging.getLogger('pokebot-main')

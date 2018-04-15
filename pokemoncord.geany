@@ -18,19 +18,18 @@ detect_indent_width=false
 indent_mode=2
 
 [project]
-name=Poke-bot
-base_path=F:\\Documents\\discordbot
+name=pokemoncord
+base_path=F:\\Documents\\pokemoncord
 description=
 file_patterns=
 
 [long line marker]
 long_line_behaviour=1
-long_line_column=72
+long_line_column=79
 
 [files]
 current_page=0
-FILE_NAME_0=1818;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cdiscordbot%5CBasicBot.py;0;4
-FILE_NAME_1=29;None;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cdiscordbot%5CPokemonsy.csv;0;4
+FILE_NAME_0=286;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cpokemoncord%5Cbot.py;0;4
 
 [build-menu]
 EX_00_LB=_Execute
