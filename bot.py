@@ -1,5 +1,4 @@
 import asyncio
-import csv
 import logging
 import os
 import pickle
@@ -10,16 +9,22 @@ import time
 import warnings
 
 from asyncio import ensure_future
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
 import discord
 
+import models
 
-ACCESS_TOKEN = os.environ['DISCORD_TOKEN']
+from models import Pokemon, database
+
+
+# ~ ACCESS_TOKEN = os.environ['DISCORD_TOKEN']
+ACCESS_TOKEN = 'NDI0NjQ1MTUzNzMxNTEwMjky.DbTWOw.cqirV8y_V4GtfFXpWDrDwYKhJb8'
 
 # logging configuration
 log = logging.getLogger('pokebot-main')
 log.setLevel(logging.DEBUG)
+log.propagate = False
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(name)s %(levelname)s: %(message)s')
@@ -29,78 +34,13 @@ del console_handler, formatter
 
 logging.basicConfig(level=logging.INFO)
 
+
 TEAM_SIZE = 6
-pkmn_box = []
-pkmn_team = []
+TEAM = 1
+BOX = 2
+
 spawner_loop_tasks = {}
 stop_training_events = {}
-
-
-PokemonRawData = namedtuple('PokemonData',
-                            'name, types, evo_level, evo_targets')
-
-
-class Pokemon:
-
-    __slots__ = ['number', 'name', 'exp', 'level']
-
-    all_pokemon = {}
-
-    def __init__(self, number):
-        self.number = number
-        self.name = self.all_pokemon[self.number].name
-        self.exp = 1
-        self.level = 1
-
-    @classmethod
-    def spawn_random(cls):
-        return cls(random.choice(list(cls.all_pokemon)))
-
-    @classmethod
-    def spawn_from_name(cls, name):
-        for number, pkmn in cls.all_pokemon.items():
-            if name == pkmn[0]:
-                return cls(number)
-        raise ValueError('No pokemon %s' % name)
-
-    @classmethod
-    def name_exists(cls, name):
-        return name in cls.all_pokemon.values()
-
-    def get_img_url(self):
-        return ('https://assets.pokemon.com/assets/cms2/'
-                'img/pokedex/full/{:03}.png'.format(self.number))
-
-    def add_exp(self, exp):
-        self.exp += exp
-        target_level = self.level_from_exp(self.exp)
-        if target_level > self.level:
-            self.level = target_level
-            if target_level >= self.evolution_level:
-                self.number = self.evolution_targets[0]
-
-    @staticmethod
-    def level_from_exp(exp):
-        return int((5 / 4 * exp) ** (1/3))
-
-    @property
-    def evolution_level(self):
-        return self.all_pokemon[self.number].evo_level
-
-    @property
-    def evolution_targets(self):
-        return self.all_pokemon[self.number].evo_targets
-
-    with open('Pokemonsy.csv', newline='', encoding='utf8') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            all_pokemon[int(row[0])] = PokemonRawData(
-                row[1],
-                row[2].split(),
-                int(row[3] or 99999),
-                [int(n or -1) for n in row[4].split('/')]
-            )
-    del f, reader
 
 
 class CommandDispatcher:
@@ -170,7 +110,6 @@ def spawn_pokemon(channel, name=None):
         pkmn = Pokemon.spawn_random()
     log.info('spawning {}'.format(pkmn))
     img_url = pkmn.get_img_url()
-    log.debug(img_url)
     em = discord.Embed(
         title='A wild {} has appeared!'.format(pkmn.name),
         description=('Type \'catch {}\' before '
@@ -197,34 +136,57 @@ def add_caught_pokemon(user, pkmn, channel):
     Adds the pokemon to the storage and sends a notification about caught
     pokemon to the channel.
     """
-    text = 'Congratulations! {} caught {}.'.format(
-        user.mention, pkmn.name
-    )
-    if len(pkmn_team[user.id]) < TEAM_SIZE:
-        pkmn_team[user.id].append(pkmn)
+    text = ('Congratulations! {} caught {}.'
+            .format(user.mention, pkmn.name))
+    pkmn.owner_id = user.id
+    database.connect()
+    count = (Pokemon.select()
+             .where(
+                (Pokemon.owner_id == user.id) &
+                (Pokemon.storage == 1))
+             .count())
+    if count < TEAM_SIZE:
+        pkmn.storage = TEAM
     else:
-        pkmn_box[user.id].append(pkmn)
-        text += '\nPokemon was added to your storage'
+        pkmn.storage = BOX
+        text += '\nPokemon was added to your box.'
+    pkmn.save()
+    database.commit()
+    database.close()
     ensure_future(client.send_message(channel, text))
 
 
 @command.async_register('box')
 def list_pokemon_storage(message):
     """Command: box - list the pokemons in the user's box."""
+    database.connect()
     text = 'Your pokémons:\n' + '\n'.join(
         " - **{0.name}** lv. {0.level}".format(pkmn)
-        for pkmn in pkmn_box[message.author.id]
+        for pkmn in
+        (Pokemon.select()
+         .where(
+            (Pokemon.owner_id == message.author.id) &
+            (Pokemon.storage == BOX)
+         ))
     )
+    database.close()
     yield from client.send_message(message.channel, text)
 
 
 @command.async_register('team')
 def list_pokemon_team(message):
     """Command: team - list the pokemons in user's team."""
+    database.connect()
     text = 'Your team:\n' + '\n'.join(
         " - **{0.name}** lv. {0.level}".format(pkmn)
-        for pkmn in pkmn_team[message.author.id]
+        for pkmn in
+        (Pokemon.select()
+         .where(
+            (Pokemon.owner_id == message.author.id) &
+            (Pokemon.storage == TEAM)
+         ))
     )
+    database.close()
     yield from client.send_message(message.channel, text)
 
 
@@ -237,7 +199,18 @@ def show_pokemon(message):
     if index is not given, show the first pokemon.
     """
     num = int(message.content[10:] or 1)
-    pkmn = pkmn_team[message.author.id][num - 1]
+    database.connect()
+    pkmn = (Pokemon.select()
+            .where(
+                (Pokemon.owner_id == message.author.id) &
+                (Pokemon.storage == TEAM)
+            )
+            .offset(num - 1)
+            .limit(1)
+            .first())
+    database.close()
+    if pkmn is None:
+        return
     em = discord.Embed(
         title='{} lv. {}'.format(pkmn.name, pkmn.level),
         colour=0xC00000
@@ -246,64 +219,90 @@ def show_pokemon(message):
     yield from client.send_message(message.channel, embed=em)
 
 
-@command.async_register('start training')
-def start_training(message):
-    """Command: start training - starts a one hour training."""
-    if message.author.id in stop_training_events:
-        yield from client.send_message(
-            message.channel, "You are already training."
-        )
-        return
-    stop_event = asyncio.Event()
-    stop_training_events[message.author.id] = stop_event
-    start_time = client.loop.time()
-    handler = client.loop.call_later(3600, stop_event.set)
-    yield from client.send_message(message.channel, "Training started.")
-    yield from stop_event.wait()
-    handler.cancel()
-    del stop_training_events[message.author.id]
-    delta_time = (client.loop.time() - start_time) // 60
-    for pkmn in pkmn_team[message.author.id]:
-        pkmn.add_exp(delta_time)
-    ensure_future(client.send_message(
-        message.author,
-        "Training finished. You trained for %u minutes." % delta_time
-    ))
+# ~ @command.async_register('start training')
+# ~ def start_training(message):
+    # ~ """Command: start training - starts a one hour training."""
+    # ~ if message.author.id in stop_training_events:
+        # ~ yield from client.send_message(
+            # ~ message.channel, "You are already training."
+        # ~ )
+        # ~ return
+    # ~ stop_event = asyncio.Event()
+    # ~ stop_training_events[message.author.id] = stop_event
+    # ~ start_time = client.loop.time()
+    # ~ handler = client.loop.call_later(3600, stop_event.set)
+    # ~ yield from client.send_message(message.channel, "Training started.")
+    # ~ yield from stop_event.wait()
+    # ~ handler.cancel()
+    # ~ del stop_training_events[message.author.id]
+    # ~ delta_time = (client.loop.time() - start_time) // 60
+    # ~ for pkmn in pkmn_team[message.author.id]:
+        # ~ pkmn.add_exp(delta_time)
+    # ~ ensure_future(client.send_message(
+        # ~ message.author,
+        # ~ "Training finished. You trained for %u minutes." % delta_time
+    # ~ ))
 
 
-@command.async_register('stop training')
-def stop_training(message):
-    try:
-        stop_training_events[message.author.id].set()
-    except KeyError:
-        pass
+# ~ @command.async_register('stop training')
+# ~ def stop_training(message):
+    # ~ try:
+        # ~ stop_training_events[message.author.id].set()
+    # ~ except KeyError:
+        # ~ pass
 
 
 @command.async_register('withdraw')
 def withdraw_pokemon(message):
-    if len(pkmn_team[message.author.id]) >= TEAM_SIZE:
-        text = 'Your team is full.'
-    else:
+    database.connect()
+    num = (Pokemon.select()
+           .where(
+               (Pokemon.storage == TEAM) &
+               (Pokemon.owner_id == message.author.id)
+           )
+           .count())
+    if num >= TEAM_SIZE:
+        database.close()
+        yield from client.send_message(message.channel, 'Your team is full.')
+        return
+    try:
         tokens = message.content.split()
         pkmn_name = ' '.join(tokens[2:])
-        box = pkmn_box[message.author.id]
-        index, pkmn = next((i, p) for (i, p) in enumerate(box)
-                           if p.name == pkmn_name)
-        del box[index]
-        pkmn_team[message.author.id].append(pkmn)
-        text = '{} withdrawn.'.format(pkmn.name)
-    yield from client.send_message(message.channel, text)
+        pkmn = (Pokemon.select()
+                .where(
+                    (Pokemon.storage == BOX) &
+                    (Pokemon.owner_id == message.author.id) &
+                    (Pokemon.name == pkmn_name)
+                )
+                .first())
+        pkmn.storage = TEAM
+        pkmn.save()
+    finally:
+        database.commit()
+        database.close()
+    yield from client.send_message(
+        message.channel, '{} withdrawn.'.format(pkmn.name)
+    )
 
 
 @command.async_register('deposit')
 def deposit_pkmn_handler(message):
     tokens = message.content.split()
     pkmn_name = ' '.join(tokens[2:])
-    team = pkmn_team[message.author.id]
-    index, pkmn =  next((i, p) for (i, p) in enumerate(team)
-                        if p.name == pkmn_name)
-    del team[index]
-    pkmn_box[message.author.id].append(pkmn)
+    database.connect()
+    try:
+        pkmn = (Pokemon.select()
+                .where(
+                    (Pokemon.storage == TEAM) &
+                    (Pokemon.owner_id == message.author.id) &
+                    (Pokemon.name == pkmn_name)
+                )
+                .first())
+        pkmn.storage = BOX
+        pkmn.save()
+    finally:
+        database.commit()
+        database.close()
     yield from client.send_message(
         message.channel, '{} sent to box'.format(pkmn.name)
     )
@@ -317,8 +316,16 @@ def start_trade(message):
 
     tokens = message.content.split()
     pkmn_name = ' '.join(tokens[3:])
-    if not Pokemon.name_exists(pkmn_name):
+    database.connect()
+    try:
+        seller_pkmn = Pokemon.get(
+            Pokemon.owner_id == seller.id,
+            Pokemon.name == pkmn_name
+        )
+    except Pokemon.DoesNotExist:
         return
+    finally:
+        database.close()
 
     # pokemon exists, send invitation to trade
     text = ("{}, {} invites you to trade and offers {}.\n"
@@ -339,30 +346,36 @@ def start_trade(message):
         yield from client.send_message(channel, 'Trade cancelled.')
         return
     tokens = response.content.split()
-    pkmn2_name = ' '.join(tokens[3:])
-    if not Pokemon.name_exists(pkmn2_name):
+    pkmn_name = ' '.join(tokens[3:])
+    database.connect()
+    try:
+        buyer_pkmn = Pokemon.get(
+            Pokemon.owner_id == buyer.id,
+            Pokemon.name == pkmn_name
+        )
+        buyer_pkmn.owner_id = seller.id
+        seller_pkmn.owner_id = buyer.id
+        buyer_pkmn.storage = seller_pkmn.storage = BOX
+        buyer_pkmn.save()
+        seller_pkmn.save()
+        database.commit()
+    except Pokemon.DoesNotExist:
         return
+    except:
+        database.rollback()
+        raise
+    finally:
+        database.close()
 
-    # trade was accepted by both sides, complete the trade
-    trade_pkmns(seller, pkmn_name, buyer, pkmn2_name)
     yield from client.send_message(channel, 'Trade completed.')
 
 
-def trade_pkmns(seller, sname, buyer, bname):
-    sindex, spkmn = next((i, p) for (i, p) in enumerate(pkmn_box[seller.id])
-                         if p.name == sname)
-    bindex, bpkmn = next((i, p) for (i, p) in enumerate(pkmn_box[buyer.id])
-                         if p.name == bname)
-    pkmn_box[buyer.id].append(pkmn_box[seller.id].pop(sindex))
-    pkmn_box[seller.id].append(pkmn_box[buyer.id].pop(bindex))
-
-
+# TODO: make spawner resume after application restart
 @command.async_register('start spawner')
 def start_spawner(message):
     global spawner_loop_tasks
     channel = message.channel
     if channel.id not in spawner_loop_tasks:
-        # channel = client.get_channel('424271560967323669')
         spawner_loop_tasks[channel.id] = ensure_future(spawner_loop(channel))
         yield from client.send_message(channel, 'Spawner started')
 
@@ -393,32 +406,13 @@ def shutdown(message):
         task.cancel()
 
 
-def init():
-    """Load previously saved pokemons."""
-    global pkmn_box, pkmn_team
-    try:
-        with open('pkmn-box.dat', 'rb') as box_file, \
-                open('pkmn-team.dat', 'rb') as team_file:
-            pkmn_box = pickle.load(box_file)
-            pkmn_team = pickle.load(team_file)
-    except FileNotFoundError:
-        pkmn_box = defaultdict(list)
-        pkmn_team = defaultdict(list)
-
-
-def save_pkmn_to_file():
-    """Save current team and storage states to files."""
-    with open('pkmn-box.dat', 'wb') as storage_file, \
-            open('pkmn-team.dat', 'wb') as team_file:
-        pickle.dump(pkmn_box, storage_file)
-        pickle.dump(pkmn_team, team_file)
-
-
-if __name__ == '__main__':
-    init()
+def main():
     try:
         client.run(ACCESS_TOKEN)
     finally:
-        save_pkmn_to_file()
-    client.loop.close()
-    client.close()
+        client.loop.close()
+        client.close()
+
+
+if __name__ == '__main__':
+    main()

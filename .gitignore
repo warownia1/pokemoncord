@@ -1,4 +1,5 @@
-env/**
+venv/**
 **.dat
+sqlite.db
 __pycache__/**
 
