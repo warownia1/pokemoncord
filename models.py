@@ -19,9 +19,9 @@ elif conf.DATABASE == 'POSTGRES':
     res = urlparse(conf.DATABASE_URL)
     database = PostgresqlDatabase(
         database=res.path[1:],
-        username=res.username,
+        user=res.username,
         password=res.password,
-        hostname=res.hostname,
+        host=res.hostname,
         port=res.port
     )
     del res
