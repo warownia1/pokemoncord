@@ -1,0 +1,6 @@
+import os
+
+DEBUG = False
+ACCESS_TOKEN = os.environ['DISCORD_TOKEN']
+DATABASE = "POSTGRES"
+DATABASE_URL = os.environ['DATABASE_URL']

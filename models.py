@@ -2,11 +2,31 @@ import csv
 import random
 
 from collections import namedtuple
+from urllib.parse import urlparse
 
-from peewee import Model, IntegerField, CharField, SqliteDatabase
+from peewee import (Model, IntegerField, CharField,
+                    SqliteDatabase, PostgresqlDatabase)
+                    
+try:
+    import conf_dev as conf
+except ImportError:
+    import conf
 
 
-database = SqliteDatabase('sqlite.db')
+if conf.DATABASE == 'SQLITE':
+    database = SqliteDatabase('sqlite.db')
+elif conf.DATABASE == 'POSTGRES':
+    res = urlparse(conf.DATABASE_URL)
+    database = PostgresqlDatabase(
+        database=res.path[1:],
+        username=res.username,
+        password=res.password,
+        hostname=res.hostname,
+        port=res.port
+    )
+    del res
+else:
+    raise ValueError("Invalid database configuration")
 
 PokemonRawData = namedtuple('PokemonData',
                             'name, types, evo_level, evo_targets')

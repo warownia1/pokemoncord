@@ -6,7 +6,6 @@ import random
 import re
 import sys
 import time
-import warnings
 
 from asyncio import ensure_future
 from collections import defaultdict
@@ -15,18 +14,24 @@ import discord
 
 import models
 
+try:
+    import conf_dev as conf
+except ImportError:
+    import conf
+    
 from models import Pokemon, database
 
 
-# ~ ACCESS_TOKEN = os.environ['DISCORD_TOKEN']
-ACCESS_TOKEN = 'NDI0NjQ1MTUzNzMxNTEwMjky.DbTWOw.cqirV8y_V4GtfFXpWDrDwYKhJb8'
-
 # logging configuration
 log = logging.getLogger('pokebot-main')
-log.setLevel(logging.DEBUG)
-log.propagate = False
 console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.DEBUG)
+if conf.DEBUG:
+    log.setLevel(logging.DEBUG)
+    console_handler.setLevel(logging.DEBUG)
+else:
+    log.setLevel(logging.WARNING)
+    console_handler.setLevel(logging.WARNING)
+log.propagate = False
 formatter = logging.Formatter('%(name)s %(levelname)s: %(message)s')
 console_handler.setFormatter(formatter)
 log.addHandler(console_handler)
@@ -70,7 +75,7 @@ class CommandDispatcher:
             for command, func in self._registered_commands:
                 if message.content.startswith(command):
                     return ensure_future(func(message))
-            raise ValueError('Invalid command')
+            log.info('Invalid command "%s"', message.content)
 
 
 client = discord.Client()
@@ -79,7 +84,7 @@ command = CommandDispatcher(client)
 
 @client.async_event
 def on_ready():
-    print('Logged on as {0}'.format(client.user))
+    log.info('Logged on as %s', client.user)
 
 
 @command.async_register('help')
@@ -419,7 +424,7 @@ def shutdown(message):
 
 def main():
     try:
-        client.run(ACCESS_TOKEN)
+        client.run(conf.ACCESS_TOKEN)
     finally:
         client.loop.close()
         client.close()
