@@ -240,7 +240,7 @@ def start_training(message):
     yield from stop_event.wait()
     handler.cancel()
     del stop_training_events[message.author.id]
-    delta_time = (client.loop.time() - start_time) # // 60
+    delta_time = (client.loop.time() - start_time) // 60
     database.connect()
     try:
         team = (Pokemon.select()

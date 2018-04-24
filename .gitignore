@@ -1,5 +1,6 @@
 venv/**
 **.dat
+**.geany
 sqlite.db
 __pycache__/**
-
+conf_dev.py
