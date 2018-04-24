@@ -3,5 +3,6 @@ async-timeout==2.0.1
 chardet==3.0.4
 discord.py==0.16.12
 multidict==4.2.0
+peewee==2.10.2
 psycopg2==2.7.4
 websockets==3.4
