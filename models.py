@@ -4,7 +4,7 @@ import random
 from collections import namedtuple
 from urllib.parse import urlparse
 
-from peewee import (Model, IntegerField, CharField,
+from peewee import (Model, IntegerField, CharField, PrimaryKeyField,
                     SqliteDatabase, PostgresqlDatabase)
                     
 try:
@@ -53,7 +53,7 @@ def get_img_url(number):
 
 class Pokemon(Model):
 
-    id = IntegerField(primary_key=True)
+    id = PrimaryKeyField(primary_key=True)
     number = IntegerField()
     name = CharField(max_length=64)
     exp = IntegerField()
