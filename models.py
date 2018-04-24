@@ -46,14 +46,15 @@ class Pokemon(Model):
 
     def add_exp(self, exp):
         self.exp += exp
-        target_level = self.level_from_exp(self.exp)
+        target_level = self.exp_to_level(self.exp)
         if target_level > self.level:
             self.level = target_level
             if target_level >= self.evolution_level:
                 self.number = self.evolution_targets[0]
+                self.name = _pokemon_data[self.number].name
 
     @staticmethod
-    def level_from_exp(exp):
+    def exp_to_level(exp):
         return int((5 / 4 * exp) ** (1/3))
 
     @property

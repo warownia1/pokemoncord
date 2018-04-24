@@ -29,13 +29,14 @@ long_line_column=79
 
 [files]
 current_page=0
-FILE_NAME_0=12189;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cpokemoncord%5Cbot.py;0;4
-FILE_NAME_1=853;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cpokemoncord%5Cmodels.py;0;4
+FILE_NAME_0=6415;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cpokemoncord%5Cbot.py;0;4
+FILE_NAME_1=1584;Python;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cpokemoncord%5Cmodels.py;0;4
 FILE_NAME_2=44;None;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cpokemoncord%5C.gitignore;0;4
+FILE_NAME_3=880;None;0;EUTF-8;0;1;0;F%3A%5CDocuments%5Cpokemoncord%5Cpokemoncord.geany;0;4
 
 [build-menu]
 EX_00_LB=_Execute
-EX_00_CM=%d\\venv\\Scripts\\python.exe "%f"
+EX_00_CM=%d\\venv\\Scripts\\python.exe "bot.py"
 EX_00_WD=
 EX_01_LB=
 EX_01_CM=

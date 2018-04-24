@@ -219,37 +219,48 @@ def show_pokemon(message):
     yield from client.send_message(message.channel, embed=em)
 
 
-# ~ @command.async_register('start training')
-# ~ def start_training(message):
-    # ~ """Command: start training - starts a one hour training."""
-    # ~ if message.author.id in stop_training_events:
-        # ~ yield from client.send_message(
-            # ~ message.channel, "You are already training."
-        # ~ )
-        # ~ return
-    # ~ stop_event = asyncio.Event()
-    # ~ stop_training_events[message.author.id] = stop_event
-    # ~ start_time = client.loop.time()
-    # ~ handler = client.loop.call_later(3600, stop_event.set)
-    # ~ yield from client.send_message(message.channel, "Training started.")
-    # ~ yield from stop_event.wait()
-    # ~ handler.cancel()
-    # ~ del stop_training_events[message.author.id]
-    # ~ delta_time = (client.loop.time() - start_time) // 60
-    # ~ for pkmn in pkmn_team[message.author.id]:
-        # ~ pkmn.add_exp(delta_time)
-    # ~ ensure_future(client.send_message(
-        # ~ message.author,
-        # ~ "Training finished. You trained for %u minutes." % delta_time
-    # ~ ))
+@command.async_register('start training')
+def start_training(message):
+    """Command: start training - starts a one hour training."""
+    if message.author.id in stop_training_events:
+        yield from client.send_message(
+            message.channel, "You are already training."
+        )
+        return
+    stop_event = asyncio.Event()
+    stop_training_events[message.author.id] = stop_event
+    start_time = client.loop.time() - 5
+    handler = client.loop.call_later(3600, stop_event.set)
+    yield from client.send_message(message.channel, "Training started.")
+    yield from stop_event.wait()
+    handler.cancel()
+    del stop_training_events[message.author.id]
+    delta_time = (client.loop.time() - start_time) # // 60
+    database.connect()
+    try:
+        team = (Pokemon.select()
+                .where(
+                    (Pokemon.owner_id == message.author.id) &
+                    (Pokemon.storage == TEAM)
+                ))
+        for pkmn in team:
+            pkmn.add_exp(delta_time)
+            pkmn.save()
+        database.commit()
+    finally:
+        database.close()
+    ensure_future(client.send_message(
+        message.author,
+        "Training finished. You trained for %u minutes." % delta_time
+    ))
 
 
-# ~ @command.async_register('stop training')
-# ~ def stop_training(message):
-    # ~ try:
-        # ~ stop_training_events[message.author.id].set()
-    # ~ except KeyError:
-        # ~ pass
+@command.async_register('stop training')
+def stop_training(message):
+    try:
+        stop_training_events[message.author.id].set()
+    except KeyError:
+        pass
 
 
 @command.async_register('withdraw')
