@@ -1,16 +1,12 @@
-import csv
 import random
 
-from collections import namedtuple
 from urllib.parse import urlparse
 
 from peewee import (Model, IntegerField, CharField, PrimaryKeyField,
                     SqliteDatabase, PostgresqlDatabase)
                     
-try:
-    import conf_dev as conf
-except ImportError:
-    import conf
+import conf
+from conf import pokedex_size, pokemon_data
 
 
 if conf.DATABASE == 'SQLITE':
@@ -27,23 +23,6 @@ elif conf.DATABASE == 'POSTGRES':
     del res
 else:
     raise ValueError("Invalid database configuration")
-
-PokemonRawData = namedtuple('PokemonData',
-                            'name, types, evo_level, evo_targets')
-
-_pokemon_data = {}
-_highest_number = 0
-with open('Pokemonsy.csv', newline='', encoding='utf8') as f:
-    reader = csv.reader(f)
-    for row in reader:
-        _pokemon_data[int(row[0])] = PokemonRawData(
-            row[1],
-            row[2].split(),
-            int(row[3] or 99999),
-            [int(n or -1) for n in row[4].split('/')]
-        )
-    _highest_number = int(row[0])
-del f, reader, row
 
 
 def get_img_url(number):
@@ -79,18 +58,18 @@ class Pokemon(Model):
 
     @property
     def evolution_level(self):
-        return _pokemon_data[self.number].evo_level
+        return pokemon_data[self.number].evo_level
 
     @property
     def evolution_targets(self):
-        return _pokemon_data[self.number].evo_targets
+        return pokemon_data[self.number].evo_targets
 
     def __repr__(self):
         return "<Pokemon %s>" % self.name
 
     @staticmethod
     def spawn_from_number(number):
-        dat = _pokemon_data[number]
+        dat = pokemon_data[number]
         return Pokemon(number=number, name=dat.name, exp=1, level=1)
 
     @staticmethod
@@ -102,11 +81,11 @@ class Pokemon(Model):
 
     @staticmethod
     def spawn_random():
-        return Pokemon.spawn_from_number(random.randint(1, _highest_number))
+        return Pokemon.spawn_from_number(random.randint(1, pokedex_size))
 
     @staticmethod
     def pokemon_exists(name):
-        for dat in _pokemon_data.values():
+        for dat in pokemon_data.values():
             if dat.name == name:
                 return True
         return False

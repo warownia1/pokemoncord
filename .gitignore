@@ -4,3 +4,4 @@ venv/**
 sqlite.db
 __pycache__/**
 conf_dev.py
+*.pyc
