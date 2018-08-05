@@ -1,5 +1,6 @@
 import asyncio
 from asyncio import ensure_future
+from functools import partial
 
 from conf import main_log as log
 
@@ -9,6 +10,11 @@ class CommandDispatcher:
         self._registered_commands = []
         self._client = client
         client.event(self.on_message)
+        self._tasks = set()
+
+    @property
+    def tasks(self):
+        return self._tasks
 
     def async_register(self, command):
         def add(func):
@@ -18,11 +24,12 @@ class CommandDispatcher:
             return func
         return add
 
-    @asyncio.coroutine
-    def on_message(self, message):
+    async def on_message(self, message):
         if message.author == self._client.user:
             return
         for command, handler in self._registered_commands:
             if message.content.startswith(command):
                 log.debug('received command %r', message.content)
-                yield from handler(message)
+                task = ensure_future(handler(message), loop=self._client.loop)
+                self._tasks.add(task)
+                task.add_done_callback(self._tasks.remove)

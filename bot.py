@@ -10,6 +10,7 @@ import time
 
 from asyncio import ensure_future
 from collections import defaultdict
+from functools import partial
 
 import discord
 
@@ -205,10 +206,10 @@ def start_training(message):
         database.commit()
     finally:
         database.close()
-    ensure_future(client.send_message(
+    yield from client.send_message(
         message.author,
         "Training finished. You trained for %u minutes." % delta_time
-    ))
+    )
 
 
 @command.async_register('pkmn stop training')
@@ -373,26 +374,39 @@ def stop_spawner_loop(channel_id):
 def shutdown_handler(message):
     yield from shutdown()
     
-        
-@asyncio.coroutine
-def shutdown():
+
+async def shutdown():
+    log.info('Shutting down')
     for event in stop_training_events.values():
         event.set()
     for channel_id in list(spawner_loop_tasks.keys()):
         stop_spawner_loop(channel_id)
-    yield from client.close()
+    log.info('Completing unfinished tasks')
+    await asyncio.wait(command.tasks, timeout=10)
+    log.info('Closing client connection')
+    await client.logout()
+    await client.close()
 
 
-def term_signal_handler(signal_number, stack_frame):
-    ensure_future(shutdown())
+def sigterm_handler(signal_number):
+    log.warning('Signal %d received', signal_number)
+    ensure_future(shutdown(), loop=client.loop)
 
 
 def main():
-    signal.signal(signal.SIGINT, term_signal_handler)
-    signal.signal(signal.SIGTERM, term_signal_handler)
+    client.loop.add_signal_handler(
+        signal.SIGTERM, partial(term_signal_handler, signal.SIGTERM)
+    )
+    client.loop.add_signal_handler(
+        signal.SIGINT, partial(term_signal_handler, signal.SIGINT)
+    )
     try:
-        client.loop.run_until_complete(client.start(conf.ACCESS_TOKEN))
-        client.loop.run_until_complete(client.logout())
+        try:
+            start = client.loop.create_task(client.start(conf.ACCESS_TOKEN))
+            client.loop.run_until_complete(start)
+        except KeyboardInterrupt:
+            log.warning('KeyboardInterrupt received')
+            client.loop.run_until_complete(shutdown())
         pending = asyncio.Task.all_tasks(loop=client.loop)
         gathered = asyncio.gather(*pending, loop=client.loop)
         try:
@@ -403,6 +417,7 @@ def main():
             pass
     finally:
         client.loop.close()
+        log.info('Shutdown completed, loop closed')
 
 
 if __name__ == '__main__':
