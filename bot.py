@@ -16,7 +16,7 @@ import discord
 
 import models
 import conf
-    
+
 from conf import main_log as log
 from command import CommandDispatcher
 from models import Pokemon, database
@@ -39,22 +39,21 @@ def on_ready():
     log.info('Logged on as %s', client.user)
 
 
-@command.async_register('pkmn help')
-def print_help(message):
-    yield from client.send_message(
+@command.register('pkmn help')
+async def print_help(message):
+    await client.send_message(
         message.channel,
         'Help text'
     )
 
 
-@command.async_register('pkmn spawn')
-def spawn_request(message):
+@command.register('pkmn spawn')
+async def spawn_request(message):
     """Command: spawn [name] - spawn a pokemon with given name or random."""
-    yield from spawn_pokemon(message.channel, message.content[11:])
+    await spawn_pokemon(message.channel, message.content[11:])
 
 
-@asyncio.coroutine
-def spawn_pokemon(channel, name=None):
+async def spawn_pokemon(channel, name=None):
     """Spawn the pokemon with given name in the channel.
 
     Creates a new Pokemon instance following the name or random if None given.
@@ -74,13 +73,13 @@ def spawn_pokemon(channel, name=None):
         colour=0x00AE86
     )
     em.set_image(url=img_url)
-    yield from client.send_message(channel, embed=em)
-    message = yield from client.wait_for_message(
+    await client.send_message(channel, embed=em)
+    message = await client.wait_for_message(
         300, channel=channel,
         content='catch {}'.format(pkmn.name)
     )
     if message is None:
-        yield from client.send_message(
+        await client.send_message(
             channel, '{} escaped.'.format(pkmn.name)
         )
     else:
@@ -113,8 +112,8 @@ def add_caught_pokemon(user, pkmn, channel):
     ensure_future(client.send_message(channel, text))
 
 
-@command.async_register('pkmn box')
-def list_pokemon_storage(message):
+@command.register('pkmn box')
+async def list_pokemon_storage(message):
     """Command: box - list the pokemons in the user's box."""
     database.connect()
     text = 'Your pokémons:\n' + '\n'.join(
@@ -127,11 +126,11 @@ def list_pokemon_storage(message):
          ))
     )
     database.close()
-    yield from client.send_message(message.channel, text)
+    await client.send_message(message.channel, text)
 
 
-@command.async_register('pkmn team')
-def list_pokemon_team(message):
+@command.register('pkmn team')
+async def list_pokemon_team(message):
     """Command: team - list the pokemons in user's team."""
     database.connect()
     text = 'Your team:\n' + '\n'.join(
@@ -144,11 +143,11 @@ def list_pokemon_team(message):
          ))
     )
     database.close()
-    yield from client.send_message(message.channel, text)
+    await client.send_message(message.channel, text)
 
 
-@command.async_register('pkmn show')
-def show_pokemon(message):
+@command.register('pkmn show')
+async def show_pokemon(message):
     """Command: show [index] - show the pokemon from your team.
 
     Displays information about the pokemon in the current channel.
@@ -173,14 +172,14 @@ def show_pokemon(message):
         colour=0xC00000
     )
     em.set_image(url=pkmn.get_img_url())
-    yield from client.send_message(message.channel, embed=em)
+    await client.send_message(message.channel, embed=em)
 
 
-@command.async_register('pkmn start training')
-def start_training(message):
+@command.register('pkmn start training')
+async def start_training(message):
     """Command: start training - starts a one hour training."""
     if message.author.id in stop_training_events:
-        yield from client.send_message(
+        await client.send_message(
             message.channel, "You are already training."
         )
         return
@@ -188,8 +187,8 @@ def start_training(message):
     stop_training_events[message.author.id] = stop_event
     start_time = client.loop.time() - 5
     handler = client.loop.call_later(3600, stop_event.set)
-    yield from client.send_message(message.channel, "Training started.")
-    yield from stop_event.wait()
+    await client.send_message(message.channel, "Training started.")
+    await stop_event.wait()
     handler.cancel()
     del stop_training_events[message.author.id]
     delta_time = (client.loop.time() - start_time) // 60
@@ -206,22 +205,22 @@ def start_training(message):
         database.commit()
     finally:
         database.close()
-    yield from client.send_message(
+    await client.send_message(
         message.author,
         "Training finished. You trained for %u minutes." % delta_time
     )
 
 
-@command.async_register('pkmn stop training')
-def stop_training(message):
+@command.register('pkmn stop training')
+async def stop_training(message):
     try:
         stop_training_events[message.author.id].set()
     except KeyError:
         pass
 
 
-@command.async_register('pkmn withdraw')
-def withdraw_pokemon(message):
+@command.register('pkmn withdraw')
+async def withdraw_pokemon(message):
     database.connect()
     num = (Pokemon.select()
            .where(
@@ -231,7 +230,7 @@ def withdraw_pokemon(message):
            .count())
     if num >= TEAM_SIZE:
         database.close()
-        yield from client.send_message(message.channel, 'Your team is full.')
+        await client.send_message(message.channel, 'Your team is full.')
         return
     try:
         tokens = message.content.split()
@@ -248,13 +247,13 @@ def withdraw_pokemon(message):
     finally:
         database.commit()
         database.close()
-    yield from client.send_message(
+    await client.send_message(
         message.channel, '{} withdrawn.'.format(pkmn.name)
     )
 
 
-@command.async_register('pkmn deposit')
-def deposit_pkmn_handler(message):
+@command.register('pkmn deposit')
+async def deposit_pkmn_handler(message):
     tokens = message.content.split()
     pkmn_name = ' '.join(tokens[2:])
     database.connect()
@@ -271,13 +270,13 @@ def deposit_pkmn_handler(message):
     finally:
         database.commit()
         database.close()
-    yield from client.send_message(
+    await client.send_message(
         message.channel, '{} sent to box'.format(pkmn.name)
     )
 
 
-@command.async_register('pkmn trade')
-def start_trade(message):
+@command.register('pkmn trade')
+async def start_trade(message):
     seller = message.author
     buyer = message.mentions[0]
     channel = message.channel
@@ -299,7 +298,7 @@ def start_trade(message):
     text = ("{}, {} invites you to trade and offers {}.\n"
             "Enter 'pkmn offer {} <pokemon>' to trade."
             .format(buyer.mention, seller.name, pkmn_name, seller.mention))
-    yield from client.send_message(channel, text)
+    await client.send_message(channel, text)
 
     # wait for buyer to accept trade
     def check(message):
@@ -307,11 +306,11 @@ def start_trade(message):
             'pkmn offer {}'.format(seller.mention)
         )
 
-    response = yield from client.wait_for_message(
+    response = await client.wait_for_message(
         300, channel=channel, author=buyer, check=check
     )
     if not response:
-        yield from client.send_message(channel, 'Trade cancelled.')
+        await client.send_message(channel, 'Trade cancelled.')
         return
     tokens = response.content.split()
     pkmn_name = ' '.join(tokens[3:])
@@ -335,30 +334,29 @@ def start_trade(message):
     finally:
         database.close()
 
-    yield from client.send_message(channel, 'Trade completed.')
+    await client.send_message(channel, 'Trade completed.')
 
 
 # TODO: make spawner resume after application restart
-@command.async_register('pkmn start spawner')
-def start_spawner_handler(message):
+@command.register('pkmn spawner set')
+async def start_spawner_handler(message):
     global spawner_loop_tasks
     channel = message.channel
     if channel.id not in spawner_loop_tasks:
         spawner_loop_tasks[channel.id] = ensure_future(spawner_loop(channel))
-        yield from client.send_message(channel, 'Spawner started')
+        await client.send_message(channel, 'Spawner started')
 
 
-@asyncio.coroutine
-def spawner_loop(channel):
+async def spawner_loop(channel):
     while True:
-        yield from spawn_pokemon(channel)
-        yield from asyncio.sleep(random.randint(10, 20))
+        await spawn_pokemon(channel)
+        await asyncio.sleep(random.randint(10, 20))
 
 
-@command.async_register('pkmn stop spawner')
-def stop_spawner_handler(message):
+@command.register('pkmn spawner stop')
+async def stop_spawner_handler(message):
     stop_spawner_loop(message.channel.id)
-    yield from client.send_message(message.channel, 'Spawner stopped')
+    await client.send_message(message.channel, 'Spawner stopped')
 
 
 def stop_spawner_loop(channel_id):
@@ -370,9 +368,9 @@ def stop_spawner_loop(channel_id):
         pass
 
 
-@command.async_register('pkmn shutdown')
-def shutdown_handler(message):
-    yield from shutdown()
+@command.register('pkmn shutdown')
+async def shutdown_handler(message):
+    await shutdown()
     
 
 async def shutdown():
@@ -382,24 +380,21 @@ async def shutdown():
     for channel_id in list(spawner_loop_tasks.keys()):
         stop_spawner_loop(channel_id)
     log.info('Completing unfinished tasks')
-    await asyncio.wait(command.tasks, timeout=10)
+    if command.tasks:
+        await asyncio.wait(command.tasks, timeout=10)
     log.info('Closing client connection')
     await client.logout()
     await client.close()
 
 
 def sigterm_handler(signal_number):
-    log.warning('Signal %d received', signal_number)
+    log.warning('Signal %s received', signal_number)
     ensure_future(shutdown(), loop=client.loop)
 
 
 def main():
-    client.loop.add_signal_handler(
-        signal.SIGTERM, partial(term_signal_handler, signal.SIGTERM)
-    )
-    client.loop.add_signal_handler(
-        signal.SIGINT, partial(term_signal_handler, signal.SIGINT)
-    )
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        client.loop.add_signal_handler(sig, partial(sigterm_handler, sig))
     try:
         try:
             start = client.loop.create_task(client.start(conf.ACCESS_TOKEN))
@@ -421,4 +416,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    finally:
+        client.close()

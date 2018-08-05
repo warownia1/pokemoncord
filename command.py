@@ -16,10 +16,10 @@ class CommandDispatcher:
     def tasks(self):
         return self._tasks
 
-    def async_register(self, command):
+    def register(self, command):
         def add(func):
             if not asyncio.iscoroutinefunction(func):
-                func = asyncio.coroutine(func)
+                raise ValueError('Funciton must be coroutine')
             self._registered_commands.append((command, func))
             return func
         return add
